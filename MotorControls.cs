@@ -202,6 +202,10 @@ public class MotorControls : MonoBehaviour
         modelBody.rotation = Quaternion.LookRotation(currentForward, -currentDown);
     }
 
+    /// <summary>
+    /// Simulates a hovering effect for the car's model over the ground.
+    /// Adjusts the model's position based on the car's velocity, bobbing height, and alignment speed.
+    /// </summary>
     private void HoverModelOverGround()
     {
         bobTime += Time.fixedDeltaTime;
