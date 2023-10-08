@@ -65,6 +65,7 @@ public class ThirdPersonController : MonoBehaviour, IEntity
 
     private void Update()
     {
+        //Gets current state of animator. If animator is playing the attack animation, disable collider
         if (animator.GetCurrentAnimatorStateInfo(1).IsName("RightHand@Attack01") && animator.GetCurrentAnimatorStateInfo(1).normalizedTime < .6f)
         {
             sword.GetComponent<MeshCollider>().enabled = true;
