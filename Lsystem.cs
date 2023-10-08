@@ -25,12 +25,14 @@ public class Lsystem : MonoBehaviour
     private Stack<TransformInfo> transformStack;
     private Dictionary<char, string> rules;
     
-
     void Start()
     {
         transformStack = new Stack<TransformInfo>();
     }
 
+    /// <summary>
+    /// Uses a dictionary to generate a sequence of branches
+    /// </summary>
     public void GenerateTree()
     {
         rules = new Dictionary<char, string>
