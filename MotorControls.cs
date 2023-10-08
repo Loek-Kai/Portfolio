@@ -4,40 +4,44 @@ using UnityEngine;
 
 public class CarScript : MonoBehaviour
 {
-    [SerializeField] private Rigidbody sphereBody;
-    [SerializeField] private Transform castFront, castBack;
-    private Rigidbody modelBody;
+    [SerializeField] private Rigidbody sphereBody; // Rigidbody of the car's main sphere
+    
+    // Transform points to shoot raycasts off of
+    [SerializeField] private Transform castFront, castBack; // Front and back raycast positions
+    
+    private Rigidbody modelBody; // Rigidbody of the car's model
 
     [Space]
-    [SerializeField] private float modelOffset;
-    [SerializeField] private LayerMask groundMask;
-    [SerializeField] private float alignmentSpeed = 1;
-    [SerializeField] private float gravityScale = 9.81f;
-
+    [SerializeField] private float modelOffset; // Offset between the model and the sphere
+    [SerializeField] private LayerMask groundMask; // Layer mask to define the ground
+    [SerializeField] private float alignmentSpeed = 1; // Speed for aligning the car with the ground
+    [SerializeField] private float gravityScale = 9.81f; // Gravity strength
+    
     [Space]
-    [SerializeField] [Min(float.Epsilon)] private float mass = 1;
-
+    [SerializeField] [Min(float.Epsilon)] private float mass = 1; // Mass of the car
+    
     [Space]
-    [SerializeField] private AnimationCurve tireGripBasedOnVelocity;
-    [SerializeField] private float maxTurnAngle = 5;
-    [SerializeField] private AnimationCurve turnAngleBasedOnVelocity;
-    [SerializeField] private float leanIntensity = 15;
-
+    [SerializeField] private AnimationCurve tireGripBasedOnVelocity; // Tire grip based on velocity
+    [SerializeField] private float maxTurnAngle = 5; // Maximum turning angle
+    [SerializeField] private AnimationCurve turnAngleBasedOnVelocity; // Turning angle based on velocity
+    [SerializeField] private float leanIntensity = 15; // Intensity of leaning into turns
+    
     [Space]
-    [SerializeField] private AnimationCurve torqueBasedOnVelocity;
-    [SerializeField] private float maxSpeed = 500;
-    [SerializeField] private float dragPercent = 0.1f;
-
+    [SerializeField] private AnimationCurve torqueBasedOnVelocity; // Torque based on velocity
+    [SerializeField] private float maxSpeed = 500; // Maximum speed
+    [SerializeField] private float dragPercent = 0.1f; // Drag percentage
+    
     [Space]
-    [SerializeField] private float bobHeight;
-    [SerializeField] private float bobSpeed;
-    private float bobTime = 0;
-    public float MaxSpeed { get { return maxSpeed; } }
+    [SerializeField] private float bobHeight; // Height of bobbing
+    [SerializeField] private float bobSpeed; // Speed of bobbing
+    private float bobTime = 0; // Time used for bobbing
+    public float MaxSpeed { get { return maxSpeed; } } // Accessor for maximum speed
 
     private float forwardVelocity 
     { 
         get
         {
+            // Calculate forward velocity
             float v = Vector3.Dot(currentForward, sphereBody.velocity);
             if (float.IsNaN(v))
             {
@@ -46,13 +50,14 @@ public class CarScript : MonoBehaviour
             return v;
         } 
     }
-    public float ForwardVelocity { get { return forwardVelocity; } }
-    public float NormalizedVelocity { get { return Mathf.Clamp01(Mathf.Abs(forwardVelocity) / maxSpeed); } }
+    public float ForwardVelocity { get { return forwardVelocity; } } // Accessor for forward velocity
+    public float NormalizedVelocity { get { return Mathf.Clamp01(Mathf.Abs(forwardVelocity) / maxSpeed); } } // Normalized velocity
 
     private float sideVelocity
     {
         get
         {
+            // Calculate side velocity
             float v = Vector3.Dot(modelBody.transform.right, sphereBody.velocity);
             if (float.IsNaN(v))
             {
@@ -75,6 +80,7 @@ public class CarScript : MonoBehaviour
 
     private void Update()
     {
+        // Get input axis for steering
         inputAxis = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         GetCurrentDown();
     }
@@ -95,6 +101,7 @@ public class CarScript : MonoBehaviour
 
     private void Drift()
     {
+        // Drift the car
         float tireGrip = tireGripBasedOnVelocity.Evaluate(NormalizedVelocity);
 
         float targetVelocityChange = -sideVelocity * tireGrip;
@@ -104,6 +111,7 @@ public class CarScript : MonoBehaviour
 
     private void Accelerate()
     {
+        // Accelerate the car
         if (forwardVelocity < maxSpeed)
         {
             float targetAcceleration = torqueBasedOnVelocity.Evaluate(NormalizedVelocity) / Time.deltaTime;
@@ -113,17 +121,19 @@ public class CarScript : MonoBehaviour
 
     private void Steer()
     {
+        // Steer the car
         float rotationAngle = inputAxis.x * (turnAngleBasedOnVelocity.Evaluate(NormalizedVelocity) * maxTurnAngle) * Time.deltaTime;
         Quaternion rotationChange = Quaternion.AngleAxis(rotationAngle, Vector3.up);
         modelBody.MoveRotation(modelBody.rotation * rotationChange);
     }
 
     /// <summary>
-    /// uses the barycentric coordinate of a raycast to determine an accurate surface normal
-    /// interpolates between the three normals of a tri
+    /// Uses the barycentric coordinate of a raycast to determine an accurate surface normal.
+    /// Interpolates between the three normals of a triangle.
     /// </summary>
     private void GetCurrentDown()
     {
+        // Get the current surface normal
         RaycastHit hit;
         if (!Physics.Raycast(sphereBody.position, currentDown, out hit, Mathf.Infinity, groundMask))
         {
@@ -131,53 +141,53 @@ public class CarScript : MonoBehaviour
             return;
         }
 
-        //check for collider and if it has a sharedmesh
+        // Check for collider and sharedmesh
         MeshCollider hitMeshCollider = hit.collider as MeshCollider;
         if (hitMeshCollider == null)
         {
-            Debug.LogError("hit does not have meshcollider");
+            Debug.LogError("Hit does not have MeshCollider");
             return;
         }
         if (hitMeshCollider.sharedMesh == null)
         {
-            Debug.LogError("hit does not have sharedmesh");
+            Debug.LogError("Hit does not have sharedMesh");
             return;
         }
 
-        //get the normals and triangles of the mesh
+        // Get the normals and triangles of the mesh
         Mesh hitMesh = hitMeshCollider.sharedMesh;
         Vector3[] meshNormals = hitMesh.normals;
         int[] meshTris = hitMesh.triangles;
 
-        //get the normals of the 3 points of the triangle you hit
+        // Get the normals of the 3 points of the triangle you hit
         int adjustedIndex = hit.triangleIndex * 3;
         Vector3 triNormalX = meshNormals[meshTris[adjustedIndex + 0]];
         Vector3 triNormalY = meshNormals[meshTris[adjustedIndex + 1]];
         Vector3 triNormalZ = meshNormals[meshTris[adjustedIndex + 2]];
 
-        //the point within the triangle that you hit, expressed in a vector 3 where X + Y + Z adds up to 1
+        // The point within the triangle that you hit, expressed in a vector 3 where X + Y + Z adds up to 1
         Vector3 baryCenter = hit.barycentricCoordinate;
 
-        //scale normals with barycenter
-        //this makes it so a normal will weigh more when the hit point is closer to it
+        // Scale normals with barycenter
+        // This makes it so a normal will weigh more when the hit point is closer to it
         triNormalX *= baryCenter.x;
         triNormalY *= baryCenter.y;
         triNormalZ *= baryCenter.z;
 
-        //interpolate the normals the 3 points and normalize the result
+        // Interpolate the normals of the 3 points and normalize the result
         Vector3 interpolatedNormal = (triNormalX + triNormalY + triNormalZ).normalized;
 
-        //convert to worldspace
+        // Convert to worldspace
         Transform hitTransform = hit.collider.transform;
         interpolatedNormal = hitTransform.TransformDirection(interpolatedNormal);
 
-        //set current down opposite of the interpolated normal
+        // Set current down opposite of the interpolated normal
         currentDown = -interpolatedNormal;
     }
 
     /// <summary>
-    /// aligns rotation with the current up direction and a generated forward direction
-    /// sends down two raycasts from the front and back and gets a new forward based on those points
+    /// Aligns rotation with the current up direction and a generated forward direction.
+    /// Sends down two raycasts from the front and back and gets a new forward based on those points.
     /// </summary>
     private void RotateModelWithGround()
     {
@@ -203,7 +213,7 @@ public class CarScript : MonoBehaviour
     private void LeanBikeIntoTurn()
     {
         float leanAngle = (sideVelocity * NormalizedVelocity) * leanIntensity;
-        //Quaternion leanedRotation = Quaternion.AngleAxis(leanAngle, currentForward)
+        // Quaternion leanedRotation = Quaternion.AngleAxis(leanAngle, currentForward)
     }
 
     private void ApplyDrag()
